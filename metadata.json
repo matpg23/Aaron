@@ -1,0 +1,7 @@
+{
+  "name": "AnglerPro AI",
+  "description": "An AI-powered professional fishing guide that helps anglers find the best spots, timing, and tackle for any location using real-time search and maps data.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
