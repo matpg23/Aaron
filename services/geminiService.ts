@@ -24,20 +24,28 @@ export class GeminiService {
       RULES:
       - NO conversational filler.
       - NO "Welcome", "Good luck", or "I hope this helps".
-      - USE precise technical terms (e.g., "12lb Fluorocarbon", "Dropshot rig", "3/8oz Jig").
+      - USE precise technical terms (e.g., "12lb Fluorocarbon", "Dropshot rig").
       - BE ultra-specific about spots found in the area.
+
+      INSTRUCTIONS FOR TACKLE:
+      - Based on current local reports, infer WATER CLARITY and DEPTH.
+      - RECOMMEND specific lure colors (e.g., "Electric Chicken", "Watermelon Red Flake", "Chrome/Blue") based on clarity.
+      - RECOMMEND specific sizes (e.g., "1/4 oz", "5-inch", "Size 2 Hook") based on depth and species behavior.
 
       STRUCTURE YOUR RESPONSE AS FOLLOWS:
       [SUMMARY] One short tactical overview sentence.
+      [CONDITIONS] Brief info on Water Clarity and Target Depth (e.g., "Clarity: Stained, Depth: 10-15ft").
       [SPOTS] List 2-3 specific coordinate-based or landmark spots with a 1-sentence "why".
       [TIMING] Precise peak hours and specific weather/lunar triggers.
-      [TACKLE] Bulleted list of specific rod, line, and lure/bait combos.
+      [BITE_DATA] 12 comma-separated integers (0-10) representing bite intensity for the next 12 hours starting now.
+      [TACKLE] Bulleted list of specific rod, line, and lure/bait combos including EXACT COLORS and SIZES.
       [PRO TIPS] 3-4 punchy technique-specific commands.
 
       Use Search and Maps to find real, active reports.
     `;
 
     try {
+      // Maps grounding is only supported in Gemini 2.5 series models.
       const response = await this.ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,

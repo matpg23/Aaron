@@ -2,6 +2,7 @@
 import React from 'react';
 import { FishingRecommendation } from '../types';
 import { SponsoredGear } from './SponsoredGear';
+import { BiteWindowChart } from './BiteWindowChart';
 
 interface ReportDisplayProps {
   report: FishingRecommendation;
@@ -11,8 +12,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report }) => {
   const parseSections = (text: string) => {
     const sections: Record<string, string[]> = {
       SUMMARY: [],
+      CONDITIONS: [],
       SPOTS: [],
       TIMING: [],
+      BITE_DATA: [],
       TACKLE: [],
       'PRO TIPS': []
     };
@@ -24,7 +27,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report }) => {
       const trimmed = line.trim();
       if (!trimmed) return;
 
-      const headerMatch = trimmed.match(/^\[(SUMMARY|SPOTS|TIMING|TACKLE|PRO TIPS)\]/i);
+      const headerMatch = trimmed.match(/^\[(SUMMARY|CONDITIONS|SPOTS|TIMING|BITE_DATA|TACKLE|PRO TIPS)\]/i);
       if (headerMatch) {
         currentSection = headerMatch[1].toUpperCase();
         const content = trimmed.replace(/^\[.*?\]/i, '').trim();
@@ -40,12 +43,12 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report }) => {
   const sections = parseSections(report.summary);
 
   const SectionCard = ({ title, icon, color, items, children }: { title: string, icon: string, color: string, items?: string[], children?: React.ReactNode }) => (
-    <div className={`card-blur rounded-xl border border-slate-700/50 p-5 h-full`}>
+    <div className={`card-blur rounded-xl border border-slate-700/50 p-5 h-full flex flex-col`}>
       <div className="flex items-center gap-2 mb-3">
         <i className={`fas ${icon} ${color} text-sm`}></i>
         <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">{title}</h3>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 flex-grow">
         {items?.map((item, idx) => (
           <div key={idx} className="flex gap-2">
             <span className={`text-[10px] mt-1 ${color}`}>▶</span>
@@ -77,15 +80,26 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({ report }) => {
           icon="fa-clock" 
           color="text-green-400" 
           items={sections.TIMING} 
-        />
+        >
+          {sections.BITE_DATA[0] && <BiteWindowChart dataString={sections.BITE_DATA[0]} />}
+        </SectionCard>
+
         <SectionCard 
           title="Tackle Config" 
           icon="fa-briefcase" 
           color="text-orange-400" 
           items={sections.TACKLE} 
-        />
+        >
+          {sections.CONDITIONS.length > 0 && (
+            <div className="mt-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+              <div className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1">Environmental Context</div>
+              <p className="text-[11px] text-orange-200/80 font-mono leading-none">
+                {sections.CONDITIONS[0]}
+              </p>
+            </div>
+          )}
+        </SectionCard>
         
-        {/* SPONSORED CARD INJECTED */}
         <SectionCard 
           title="Partner Gear" 
           icon="fa-tags" 
