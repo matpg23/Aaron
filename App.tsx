@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { ReportDisplay } from './components/ReportDisplay';
 import { geminiService } from './services/geminiService';
@@ -12,8 +12,38 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<FishingRecommendation | null>(null);
   const [userLoc, setUserLoc] = useState<UserLocation | undefined>();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isCachedData, setIsCachedData] = useState(false);
+
+  // Monitor connectivity
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Load cached report if available
+    const cachedReport = localStorage.getItem('last_fishing_report');
+    if (cachedReport) {
+      try {
+        setReport(JSON.parse(cachedReport));
+        setIsCachedData(true);
+      } catch (e) {
+        console.error("Failed to load cached report", e);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleGetLocation = () => {
+    if (!isOnline) {
+      setError("GPS synchronization requires active satellite uplink (Online).");
+      return;
+    }
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -35,6 +65,10 @@ const App: React.FC = () => {
 
   const handleScout = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isOnline) {
+      setError("Cannot initiate new scan. Communications offline.");
+      return;
+    }
     if (!location) {
       setError("Please provide a location to begin scouting.");
       return;
@@ -43,10 +77,13 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     setReport(null);
+    setIsCachedData(false);
 
     try {
       const result = await geminiService.getFishingStrategy(location, species, userLoc);
       setReport(result);
+      // Persist to local storage for offline use
+      localStorage.setItem('last_fishing_report', JSON.stringify(result));
     } catch (err: any) {
       console.error(err);
       setError("Failed to generate report. Target location unreachable.");
@@ -65,7 +102,7 @@ const App: React.FC = () => {
 
   const [phraseIdx, setPhraseIdx] = useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (loading) {
       const interval = setInterval(() => {
         setPhraseIdx((prev) => (prev + 1) % loadingPhrases.length);
@@ -77,6 +114,22 @@ const App: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-8">
+        {/* Connection Status & Cache Info */}
+        <div className="flex justify-between items-center px-1">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 animate-pulse'}`}></div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {isOnline ? 'Comms Link: Active' : 'Comms Link: Offline'}
+            </span>
+          </div>
+          {isCachedData && (
+            <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+              <i className="fas fa-database text-[8px] text-blue-400"></i>
+              <span className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">Cached Intel Displayed</span>
+            </div>
+          )}
+        </div>
+
         {/* Pro Upsell Banner */}
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -144,13 +197,22 @@ const App: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-white hover:bg-slate-200 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-black py-4 rounded-lg flex items-center justify-center gap-3 transition-all uppercase tracking-tighter text-sm"
+              disabled={loading || !isOnline}
+              className={`w-full font-black py-4 rounded-lg flex items-center justify-center gap-3 transition-all uppercase tracking-tighter text-sm ${
+                !isOnline 
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' 
+                  : 'bg-white hover:bg-slate-200 text-slate-950 shadow-lg shadow-white/5'
+              }`}
             >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
                   <span>Transmitting...</span>
+                </>
+              ) : !isOnline ? (
+                <>
+                  <i className="fas fa-wifi-slash"></i>
+                  <span>System Offline</span>
                 </>
               ) : (
                 <>
