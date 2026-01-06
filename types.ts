@@ -29,3 +29,10 @@ export interface UserLocation {
   lng: number;
   address?: string;
 }
+
+export interface UserAccount {
+  username: string;
+  email: string;
+  isElite: boolean;
+  clearanceDate: string;
+}

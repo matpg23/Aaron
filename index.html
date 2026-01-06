@@ -21,7 +21,23 @@
         backdrop-filter: blur(8px);
         background: rgba(255, 255, 255, 0.05);
       }
-      /* Custom scrollbar for better pro feel */
+      /* Custom animations */
+      @keyframes scanline {
+        from { top: 0; }
+        to { top: 100%; }
+      }
+      .animate-scanline {
+        position: absolute;
+        animation: scanline 4s linear infinite;
+      }
+      @keyframes pulse-subtle {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+      }
+      .animate-pulse-subtle {
+        animation: pulse-subtle 3s ease-in-out infinite;
+      }
+      /* Custom scrollbar */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
@@ -43,7 +59,10 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          // Use relative path to avoid origin mismatch errors in proxied environments
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('ServiceWorker registered:', reg.scope))
+            .catch(err => console.warn('ServiceWorker registration failed:', err));
         });
       }
     </script>

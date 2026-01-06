@@ -2,8 +2,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { ReportDisplay } from './components/ReportDisplay';
+import { AuthPortal } from './components/AuthPortal';
 import { geminiService } from './services/geminiService';
-import { FishingRecommendation, UserLocation } from './types';
+import { FishingRecommendation, UserLocation, UserAccount } from './types';
 
 const App: React.FC = () => {
   const [location, setLocation] = useState('');
@@ -14,6 +15,14 @@ const App: React.FC = () => {
   const [userLoc, setUserLoc] = useState<UserLocation | undefined>();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isCachedData, setIsCachedData] = useState(false);
+  
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    const saved = localStorage.getItem('anglerpro_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const isElite = currentUser?.isElite || false;
 
   // Monitor connectivity
   useEffect(() => {
@@ -38,6 +47,18 @@ const App: React.FC = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const handleAuthSuccess = (user: UserAccount) => {
+    setCurrentUser(user);
+    localStorage.setItem('anglerpro_user', JSON.stringify(user));
+    setShowAuthModal(false);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('anglerpro_user');
+    setReport(null); // Clear active report for security
+  };
 
   const handleGetLocation = () => {
     if (!isOnline) {
@@ -114,7 +135,7 @@ const App: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-8">
-        {/* Connection Status & Cache Info */}
+        {/* Connection & Auth HUD */}
         <div className="flex justify-between items-center px-1">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 animate-pulse'}`}></div>
@@ -122,29 +143,54 @@ const App: React.FC = () => {
               {isOnline ? 'Comms Link: Active' : 'Comms Link: Offline'}
             </span>
           </div>
-          {isCachedData && (
-            <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
-              <i className="fas fa-database text-[8px] text-blue-400"></i>
-              <span className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">Cached Intel Displayed</span>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-black text-white uppercase tracking-tighter leading-none">{currentUser.username}</p>
+                  <p className="text-[8px] text-blue-500 uppercase tracking-widest font-bold">Clearance Level: {isElite ? 'Elite' : 'Basic'}</p>
+                </div>
+                <button onClick={handleLogout} className="text-slate-500 hover:text-red-400 text-xs transition-colors" title="Terminate Session">
+                  <i className="fas fa-power-off"></i>
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowAuthModal(true)}
+                className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-2"
+              >
+                <i className="fas fa-lock"></i> Personnel Login
+              </button>
+            )}
+            {isCachedData && (
+              <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                <i className="fas fa-database text-[8px] text-blue-400"></i>
+                <span className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">Cached</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Pro Upsell Banner */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-500 rounded-lg shadow-lg shadow-blue-500/40">
-              <i className="fas fa-crown text-white"></i>
+        {/* Elite Upgrade Banner */}
+        {!isElite && (
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse-subtle">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-500 rounded-lg shadow-lg shadow-blue-500/40">
+                <i className="fas fa-crown text-white"></i>
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-white uppercase tracking-tighter">AnglerPro Elite Upgrade</h4>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Unlock Live Satellite Maps & Hidden Spots</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-black text-white uppercase tracking-tighter">AnglerPro Elite Upgrade</h4>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest">Unlock Live Sonar & Bathymetric Maps</p>
-            </div>
+            <button 
+              onClick={() => setShowAuthModal(true)}
+              className="whitespace-nowrap px-6 py-2 bg-white text-slate-900 text-[10px] font-black uppercase rounded hover:bg-blue-400 hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            >
+              Go Elite — $2/mo
+            </button>
           </div>
-          <button className="whitespace-nowrap px-6 py-2 bg-white text-slate-900 text-[10px] font-black uppercase rounded hover:bg-blue-400 hover:text-white transition-all">
-            Go Pro — $4.99/mo
-          </button>
-        </div>
+        )}
 
         {/* Search Section */}
         <section className="card-blur rounded-2xl p-6 md:p-8 border border-slate-700 shadow-xl overflow-hidden relative">
@@ -241,7 +287,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {report && <ReportDisplay report={report} />}
+        {report && <ReportDisplay report={report} isElite={isElite} onUpgrade={() => setShowAuthModal(true)} />}
 
         {!report && !loading && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 opacity-40">
@@ -253,6 +299,13 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
+
+      {showAuthModal && (
+        <AuthPortal 
+          onClose={() => setShowAuthModal(false)} 
+          onAuthSuccess={handleAuthSuccess} 
+        />
+      )}
     </Layout>
   );
 };
